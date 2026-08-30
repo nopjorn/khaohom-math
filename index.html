@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+<title>เกมคณิตศาสตร์ ป.เตรียมอนุบาล</title>
+<style>
+  :root{
+    --pink:#ff6f91;
+    --orange:#ff9a5a;
+    --yellow:#ffd166;
+    --green:#6fcf97;
+    --blue:#56ccf2;
+    --purple:#bb6bd9;
+    --bg:#fef6e4;
+    --card:#ffffff;
+    --text:#3a3a4a;
+  }
+  *{box-sizing:border-box;}
+  html,body{
+    margin:0;padding:0;height:100%;
+    font-family:"Prompt","Kanit","Sarabun",-apple-system,BlinkMacSystemFont,sans-serif;
+    background:linear-gradient(160deg,#fef6e4,#e0f7ff 60%,#fef6e4);
+    color:var(--text);
+    -webkit-tap-highlight-color:transparent;
+    user-select:none;
+  }
+  #app{
+    max-width:520px;
+    margin:0 auto;
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+    padding:16px;
+  }
+  header{
+    text-align:center;
+    padding:8px 0 4px;
+  }
+  header h1{
+    font-size:1.5rem;
+    margin:0;
+    color:var(--pink);
+    text-shadow:1px 1px 0 #fff;
+  }
+  header .sub{
+    font-size:0.95rem;
+    color:#888;
+    margin-top:2px;
+  }
+
+  /* ---- Menu ---- */
+  #menu{
+    display:flex;
+    flex-direction:column;
+    gap:14px;
+    margin-top:20px;
+  }
+  .mode-btn{
+    border:none;
+    border-radius:22px;
+    padding:20px 16px;
+    font-size:1.3rem;
+    font-weight:700;
+    color:#fff;
+    display:flex;
+    align-items:center;
+    gap:14px;
+    cursor:pointer;
+    box-shadow:0 6px 0 rgba(0,0,0,0.12);
+    transition:transform .08s ease;
+  }
+  .mode-btn:active{ transform:translateY(4px); box-shadow:0 2px 0 rgba(0,0,0,0.12); }
+  .mode-btn .emoji{ font-size:2.1rem; }
+  .mode-compare{ background:linear-gradient(135deg,var(--blue),#3fa9dc); }
+  .mode-add{ background:linear-gradient(135deg,var(--green),#3fb87f); }
+  .mode-sub{ background:linear-gradient(135deg,var(--orange),#ff7a3d); }
+
+  /* ---- Game screen ---- */
+  #game{ display:none; flex-direction:column; flex:1; }
+  .topbar{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:10px;
+  }
+  #backBtn{
+    background:#fff;
+    border:2px solid #eee;
+    border-radius:14px;
+    padding:8px 14px;
+    font-size:1rem;
+    cursor:pointer;
+    color:var(--text);
+  }
+  #scoreBox{
+    background:var(--card);
+    border-radius:14px;
+    padding:8px 14px;
+    font-weight:700;
+    font-size:1rem;
+    box-shadow:0 2px 6px rgba(0,0,0,0.06);
+  }
+  #scoreBox span{ color:var(--pink); }
+
+  .question-card{
+    background:var(--card);
+    border-radius:26px;
+    padding:26px 18px;
+    text-align:center;
+    box-shadow:0 8px 20px rgba(0,0,0,0.08);
+    margin-bottom:18px;
+  }
+
+  /* compare mode layout */
+  .compare-row{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:14px;
+    font-size:3.2rem;
+    font-weight:800;
+    margin:6px 0 18px;
+  }
+  .num-box{
+    background:var(--yellow);
+    border-radius:20px;
+    min-width:82px;
+    padding:10px 6px;
+    color:#5a4200;
+  }
+  .op-slot{
+    min-width:70px;
+    padding:10px 6px;
+    border-radius:20px;
+    background:#eee;
+    color:#bbb;
+  }
+  .op-slot.filled{ background:var(--purple); color:#fff; }
+
+  .choices{
+    display:grid;
+    gap:12px;
+  }
+  .choices.grid3{ grid-template-columns:repeat(3,1fr); }
+  .choices.grid2{ grid-template-columns:repeat(2,1fr); }
+
+  .choice-btn{
+    border:none;
+    border-radius:18px;
+    padding:18px 8px;
+    font-size:1.7rem;
+    font-weight:800;
+    color:#fff;
+    background:linear-gradient(135deg,var(--purple),#9b4fc7);
+    cursor:pointer;
+    box-shadow:0 5px 0 rgba(0,0,0,0.12);
+  }
+  .choice-btn:active{ transform:translateY(3px); box-shadow:0 2px 0 rgba(0,0,0,0.12); }
+  .choice-btn.correct{ background:linear-gradient(135deg,var(--green),#2fae6f); }
+  .choice-btn.wrong{ background:linear-gradient(135deg,#ff5c5c,#d43c3c); }
+  .choice-btn[disabled]{ opacity:.55; }
+
+  .expr{
+    font-size:3rem;
+    font-weight:800;
+    margin-bottom:16px;
+    letter-spacing:2px;
+  }
+  .expr .n{ color:#5a4200; }
+  .expr .op{ color:var(--pink); margin:0 8px; }
+
+  .visual-row{
+    display:flex;
+    justify-content:center;
+    flex-wrap:wrap;
+    gap:6px;
+    font-size:1.9rem;
+    min-height:44px;
+    margin-bottom:6px;
+  }
+  .visual-row .fade{ opacity:.25; }
+
+  .feedback{
+    min-height:34px;
+    font-size:1.2rem;
+    font-weight:700;
+    margin-top:6px;
+  }
+  .feedback.ok{ color:#2fae6f; }
+  .feedback.no{ color:#d43c3c; }
+
+  .stars{
+    text-align:center;
+    font-size:1.4rem;
+    margin-top:auto;
+    padding-top:10px;
+    letter-spacing:4px;
+  }
+
+  footer{
+    text-align:center;
+    font-size:.8rem;
+    color:#bbb;
+    padding:14px 0 4px;
+  }
+
+  @keyframes pop{
+    0%{ transform:scale(1); }
+    50%{ transform:scale(1.15); }
+    100%{ transform:scale(1); }
+  }
+  .pop{ animation:pop .3s ease; }
+
+  @keyframes shake{
+    0%,100%{ transform:translateX(0); }
+    25%{ transform:translateX(-8px); }
+    75%{ transform:translateX(8px); }
+  }
+  .shake{ animation:shake .3s ease; }
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <h1>🌈 เกมคณิตศาสตร์ขาวหอม 🌈</h1>
+    <div class="sub">ฝึกเลขสนุก ๆ สำหรับหนูน้อยวัย 5 ขวบ</div>
+  </header>
+
+  <div id="menu">
+    <button class="mode-btn mode-compare" onclick="startGame('compare')">
+      <span class="emoji">⚖️</span> เปรียบเทียบตัวเลข
+    </button>
+    <button class="mode-btn mode-add" onclick="startGame('add')">
+      <span class="emoji">➕</span> การบวกเลข
+    </button>
+    <button class="mode-btn mode-sub" onclick="startGame('sub')">
+      <span class="emoji">➖</span> การลบเลข
+    </button>
+  </div>
+
+  <div id="game">
+    <div class="topbar">
+      <button id="backBtn" onclick="goMenu()">⬅ กลับ</button>
+      <div id="scoreBox">ถูก <span id="scoreVal">0</span> ⭐</div>
+    </div>
+
+    <div class="question-card" id="questionCard"></div>
+
+    <div id="feedback" class="feedback"></div>
+
+    <div class="stars" id="starsRow"></div>
+  </div>
+
+  <footer>ทำถูกเรื่อย ๆ เพื่อสะสมดาว ⭐ ให้ครบ 10 ดวงนะ</footer>
+</div>
+
+<script>
+let mode = null;
+let score = 0;
+let current = null; // holds current question data
+let locked = false;
+
+const questionCard = document.getElementById('questionCard');
+const feedback = document.getElementById('feedback');
+const scoreVal = document.getElementById('scoreVal');
+const starsRow = document.getElementById('starsRow');
+
+function rnd(min, max){
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function shuffle(arr){
+  for(let i = arr.length - 1; i > 0; i--){
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+function startGame(m){
+  mode = m;
+  score = 0;
+  scoreVal.textContent = score;
+  starsRow.textContent = '';
+  document.getElementById('menu').style.display = 'none';
+  document.getElementById('game').style.display = 'flex';
+  nextQuestion();
+}
+
+function goMenu(){
+  document.getElementById('menu').style.display = 'flex';
+  document.getElementById('game').style.display = 'none';
+}
+
+function updateStars(){
+  const stars = Math.min(score, 10);
+  starsRow.textContent = '⭐'.repeat(stars) + '☆'.repeat(10 - stars);
+}
+
+function nextQuestion(){
+  locked = false;
+  feedback.textContent = '';
+  feedback.className = 'feedback';
+
+  if(mode === 'compare') renderCompare();
+  else if(mode === 'add') renderArith('add');
+  else if(mode === 'sub') renderArith('sub');
+}
+
+/* ---------------- Compare mode ---------------- */
+function renderCompare(){
+  let a = rnd(0, 10);
+  let b = rnd(0, 10);
+  // avoid too many equal cases dominating - bias toward variety but allow equals sometimes
+  if(Math.random() < 0.15) b = a; // ~15% chance of equal
+  current = { a, b };
+
+  let correct;
+  if(a > b) correct = '>';
+  else if(a < b) correct = '<';
+  else correct = '=';
+
+  questionCard.innerHTML = `
+    <div class="compare-row">
+      <div class="num-box pop">${a}</div>
+      <div class="op-slot" id="opSlot">?</div>
+      <div class="num-box pop">${b}</div>
+    </div>
+    <div class="choices grid3">
+      <button class="choice-btn" data-val=">" onclick="answerCompare('>', this)">มากกว่า &gt;</button>
+      <button class="choice-btn" data-val="<" onclick="answerCompare('<', this)">น้อยกว่า &lt;</button>
+      <button class="choice-btn" data-val="=" onclick="answerCompare('=', this)">เท่ากับ =</button>
+    </div>
+  `;
+  current.correct = correct;
+}
+
+function answerCompare(val, btn){
+  if(locked) return;
+  locked = true;
+  const opSlot = document.getElementById('opSlot');
+  opSlot.textContent = val;
+  opSlot.classList.add('filled');
+
+  const buttons = document.querySelectorAll('.choice-btn');
+  buttons.forEach(b => b.disabled = true);
+
+  if(val === current.correct){
+    btn.classList.add('correct');
+    handleCorrect();
+  } else {
+    btn.classList.add('wrong');
+    const correctBtn = document.querySelector(`.choice-btn[data-val="${current.correct}"]`);
+    if(correctBtn) correctBtn.classList.add('correct');
+    handleWrong();
+  }
+}
+
+/* ---------------- Add / Subtract mode ---------------- */
+function renderArith(kind){
+  let a, b, result, symbol, emoji;
+  emoji = pickEmoji();
+
+  if(kind === 'add'){
+    a = rnd(0, 8);
+    b = rnd(0, 10 - a);
+    result = a + b;
+    symbol = '+';
+  } else {
+    a = rnd(1, 10);
+    b = rnd(0, a);
+    result = a - b;
+    symbol = '−';
+  }
+  current = { a, b, result, kind };
+
+  // build choices: correct + 2-3 distractors, unique, within reasonable range
+  const choicesSet = new Set([result]);
+  while(choicesSet.size < 4){
+    let delta = rnd(-3, 3);
+    let candidate = result + delta;
+    if(candidate < 0 || candidate > 18) continue;
+    choicesSet.add(candidate);
+  }
+  const choices = shuffle(Array.from(choicesSet));
+
+  const visualA = emoji.repeat(Math.max(a, 0));
+  const visualB = kind === 'add'
+    ? emoji.repeat(Math.max(b, 0))
+    : '<span class="fade">' + emoji.repeat(Math.max(b, 0)) + '</span>';
+
+  questionCard.innerHTML = `
+    <div class="visual-row">${kind === 'add' ? visualA + ' ' + visualB : emoji.repeat(a)}</div>
+    <div class="expr">
+      <span class="n">${a}</span><span class="op">${symbol}</span><span class="n">${b}</span><span class="op">=</span><span class="n">?</span>
+    </div>
+    <div class="choices grid2" id="choiceRow"></div>
+  `;
+
+  const row = document.getElementById('choiceRow');
+  choices.forEach(c => {
+    const b2 = document.createElement('button');
+    b2.className = 'choice-btn';
+    b2.textContent = c;
+    b2.dataset.val = c;
+    b2.onclick = () => answerArith(c, b2);
+    row.appendChild(b2);
+  });
+}
+
+function pickEmoji(){
+  const set = ['🍎','🍊','🍌','⭐','🐟','🐰','🎈','🍓','🐸','🍪'];
+  return set[rnd(0, set.length - 1)];
+}
+
+function answerArith(val, btn){
+  if(locked) return;
+  locked = true;
+  const buttons = document.querySelectorAll('.choice-btn');
+  buttons.forEach(b => b.disabled = true);
+
+  if(val === current.result){
+    btn.classList.add('correct');
+    handleCorrect();
+  } else {
+    btn.classList.add('wrong');
+    const correctBtn = document.querySelector(`.choice-btn[data-val="${current.result}"]`);
+    if(correctBtn) correctBtn.classList.add('correct');
+    handleWrong();
+  }
+}
+
+/* ---------------- Feedback + flow ---------------- */
+const goodMsgs = ['เก่งมาก! 🎉', 'ถูกต้องนะจ๊ะ! 🌟', 'สุดยอดไปเลย! 🏆', 'ใช่แล้วจ้า! 😄'];
+const tryMsgs = ['เกือบแล้ว ลองใหม่นะ 💪', 'ไม่เป็นไร มาดูคำตอบกัน 🙂', 'สู้ ๆ นะ รอบหน้าทำได้แน่! ✨'];
+
+function handleCorrect(){
+  score++;
+  scoreVal.textContent = score;
+  updateStars();
+  feedback.textContent = goodMsgs[rnd(0, goodMsgs.length - 1)];
+  feedback.className = 'feedback ok pop';
+  setTimeout(nextQuestion, 1100);
+}
+
+function handleWrong(){
+  feedback.textContent = tryMsgs[rnd(0, tryMsgs.length - 1)];
+  feedback.className = 'feedback no shake';
+  setTimeout(nextQuestion, 1500);
+}
+</script>
+</body>
+</html>
