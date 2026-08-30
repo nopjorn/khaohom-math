@@ -107,6 +107,21 @@
     box-shadow:0 2px 6px rgba(0,0,0,0.06);
   }
   #scoreBox span{ color:var(--pink); }
+  .topbar-right{
+    display:flex;
+    align-items:center;
+    gap:10px;
+  }
+  #soundBtn{
+    background:#fff;
+    border:2px solid #eee;
+    border-radius:14px;
+    width:44px;
+    height:44px;
+    font-size:1.3rem;
+    line-height:1;
+    cursor:pointer;
+  }
 
   .question-card{
     background:var(--card);
@@ -247,7 +262,10 @@
   <div id="game">
     <div class="topbar">
       <button id="backBtn" onclick="goMenu()">⬅ กลับ</button>
-      <div id="scoreBox">ถูก <span id="scoreVal">0</span> ⭐</div>
+      <div class="topbar-right">
+        <button id="soundBtn" onclick="toggleSound()" aria-label="เปิด/ปิดเสียง"></button>
+        <div id="scoreBox">ถูก <span id="scoreVal">0</span> ⭐</div>
+      </div>
     </div>
 
     <div class="question-card" id="questionCard"></div>
@@ -265,11 +283,60 @@ let mode = null;
 let score = 0;
 let current = null; // holds current question data
 let locked = false;
+let soundOn = localStorage.getItem('khaohom-sound') !== 'off';
+
+/* ---------------- Sound effects (Web Audio API, no files needed) ---------------- */
+let audioCtx = null;
+function getAudioCtx(){
+  if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if(audioCtx.state === 'suspended') audioCtx.resume();
+  return audioCtx;
+}
+
+function playTone(freq, startTime, duration, type, peakGain){
+  const ctx = getAudioCtx();
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = type;
+  osc.frequency.value = freq;
+  gain.gain.setValueAtTime(0.0001, startTime);
+  gain.gain.exponentialRampToValueAtTime(peakGain, startTime + 0.02);
+  gain.gain.exponentialRampToValueAtTime(0.0001, startTime + duration);
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+  osc.start(startTime);
+  osc.stop(startTime + duration);
+}
+
+function playCorrectSound(){
+  if(!soundOn) return;
+  const ctx = getAudioCtx();
+  const now = ctx.currentTime;
+  [523.25, 659.25, 783.99].forEach((freq, i) => {
+    playTone(freq, now + i * 0.1, 0.25, 'sine', 0.25);
+  });
+}
+
+function playWrongSound(){
+  if(!soundOn) return;
+  const ctx = getAudioCtx();
+  const now = ctx.currentTime;
+  playTone(220, now, 0.3, 'sawtooth', 0.15);
+  playTone(180, now + 0.12, 0.3, 'sawtooth', 0.15);
+}
+
+function toggleSound(){
+  soundOn = !soundOn;
+  localStorage.setItem('khaohom-sound', soundOn ? 'on' : 'off');
+  document.getElementById('soundBtn').textContent = soundOn ? '🔊' : '🔇';
+  if(soundOn) getAudioCtx();
+}
 
 const questionCard = document.getElementById('questionCard');
 const feedback = document.getElementById('feedback');
 const scoreVal = document.getElementById('scoreVal');
 const starsRow = document.getElementById('starsRow');
+document.getElementById('soundBtn').textContent = soundOn ? '🔊' : '🔇';
 
 function rnd(min, max){
   return Math.floor(Math.random() * (max - min + 1)) + min;
@@ -441,6 +508,7 @@ const goodMsgs = ['เก่งมาก! 🎉', 'ถูกต้องนะจ
 const tryMsgs = ['เกือบแล้ว ลองใหม่นะ 💪', 'ไม่เป็นไร มาดูคำตอบกัน 🙂', 'สู้ ๆ นะ รอบหน้าทำได้แน่! ✨'];
 
 function handleCorrect(){
+  playCorrectSound();
   score++;
   scoreVal.textContent = score;
   updateStars();
@@ -450,6 +518,7 @@ function handleCorrect(){
 }
 
 function handleWrong(){
+  playWrongSound();
   feedback.textContent = tryMsgs[rnd(0, tryMsgs.length - 1)];
   feedback.className = 'feedback no shake';
   setTimeout(nextQuestion, 1500);
