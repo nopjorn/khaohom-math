@@ -92,6 +92,7 @@
   .mode-add{ background:linear-gradient(135deg,var(--green),#3fb87f); }
   .mode-sub{ background:linear-gradient(135deg,var(--orange),#ff7a3d); }
   .mode-order{ background:linear-gradient(135deg,var(--purple),#9b4fc7); }
+  .mode-shape{ background:linear-gradient(135deg,var(--yellow),#f2b705); }
 
   /* ---- Game screen ---- */
   #game{ display:none; flex-direction:column; flex:1; }
@@ -264,6 +265,9 @@
   .chip-btn.chip-wrong{ background:linear-gradient(135deg,#ff5c5c,#d43c3c); }
   .chip-btn[disabled]{ opacity:.7; }
 
+  .shape-question{ font-size:1.3rem; font-weight:700; margin-bottom:16px; }
+  .shape-choice-btn{ background:#fff; display:flex; align-items:center; justify-content:center; }
+
   .feedback{
     min-height:34px;
     font-size:1.2rem;
@@ -396,6 +400,9 @@
     <button class="mode-btn mode-order" onclick="startGame('order')">
       <span class="emoji">🔀</span> เรียงลำดับตัวเลข
     </button>
+    <button class="mode-btn mode-shape" onclick="startGame('shape')">
+      <span class="emoji">🔷</span> รูปทรงและสี
+    </button>
   </div>
 
   <div id="game">
@@ -445,9 +452,9 @@ let soundOn = localStorage.getItem('khaohom-sound') !== 'off';
 let level = localStorage.getItem('khaohom-level') || 'easy'; // 'easy' | 'medium' | 'hard'
 
 const LEVEL_RANGES = {
-  easy:   { cmp: [0, 5],  add: [0, 5],  sub: [0, 5],  count: [1, 5],  order: [0, 5],  orderCount: [3, 3] },
-  medium: { cmp: [0, 10], add: [0, 10], sub: [0, 10], count: [1, 10], order: [0, 10], orderCount: [3, 4] },
-  hard:   { cmp: [0, 20], add: [0, 20], sub: [0, 20], count: [1, 20], order: [0, 20], orderCount: [4, 4] },
+  easy:   { cmp: [0, 5],  add: [0, 5],  sub: [0, 5],  count: [1, 5],  order: [0, 5],  orderCount: [3, 3], shapeChoices: [3, 3] },
+  medium: { cmp: [0, 10], add: [0, 10], sub: [0, 10], count: [1, 10], order: [0, 10], orderCount: [3, 4], shapeChoices: [3, 4] },
+  hard:   { cmp: [0, 20], add: [0, 20], sub: [0, 20], count: [1, 20], order: [0, 20], orderCount: [4, 4], shapeChoices: [4, 4] },
 };
 
 function setLevel(l){
@@ -593,6 +600,7 @@ function nextQuestion(){
   else if(mode === 'sub') renderArith('sub');
   else if(mode === 'count') renderCount();
   else if(mode === 'order') renderOrder();
+  else if(mode === 'shape') renderShape();
 
   if(current && current.spokenText) speak(current.spokenText);
 }
@@ -838,6 +846,84 @@ function tapOrderChip(val, chip){
     locked = true;
     chip.classList.add('chip-wrong');
     document.querySelectorAll('.chip-btn').forEach(b => b.disabled = true);
+    handleWrong();
+  }
+}
+
+/* ---------------- Shape/color mode ---------------- */
+const SHAPES = [
+  { id: 'circle',   name: 'วงกลม' },
+  { id: 'square',   name: 'สี่เหลี่ยม' },
+  { id: 'triangle', name: 'สามเหลี่ยม' },
+  { id: 'star',     name: 'ดาว' },
+];
+const COLORS = [
+  { name: 'แดง',     hex: '#ff5c5c' },
+  { name: 'เหลือง',  hex: '#ffd166' },
+  { name: 'น้ำเงิน', hex: '#56ccf2' },
+  { name: 'เขียว',   hex: '#6fcf97' },
+  { name: 'ส้ม',     hex: '#ff9a5a' },
+];
+
+function shapeSvg(shapeId, colorHex){
+  const c = 'width="56" height="56" viewBox="0 0 100 100"';
+  if(shapeId === 'circle')   return `<svg ${c}><circle cx="50" cy="50" r="42" fill="${colorHex}"/></svg>`;
+  if(shapeId === 'square')   return `<svg ${c}><rect x="10" y="10" width="80" height="80" rx="10" fill="${colorHex}"/></svg>`;
+  if(shapeId === 'triangle') return `<svg ${c}><polygon points="50,8 92,88 8,88" fill="${colorHex}"/></svg>`;
+  if(shapeId === 'star')     return `<svg ${c}><polygon points="50,5 61,38 96,38 68,59 79,92 50,71 21,92 32,59 4,38 39,38" fill="${colorHex}"/></svg>`;
+  return '';
+}
+
+function renderShape(){
+  const qType = Math.random() < 0.5 ? 'shape' : 'color';
+  const [cmin, cmax] = LEVEL_RANGES[level].shapeChoices;
+  let options, correctIndex, promptText, hint;
+
+  if(qType === 'shape'){
+    const numChoices = Math.min(rnd(cmin, cmax), SHAPES.length);
+    const pool = shuffle([...SHAPES]).slice(0, numChoices);
+    correctIndex = rnd(0, pool.length - 1);
+    const sharedColor = COLORS[rnd(0, COLORS.length - 1)].hex;
+    options = pool.map(s => ({ shapeId: s.id, colorHex: sharedColor }));
+    promptText = `หารูป${pool[correctIndex].name}`;
+    hint = `ลองดูรูปร่างแต่ละอันนะ เรากำลังหารูป${pool[correctIndex].name}จ้ะ`;
+  } else {
+    const numChoices = Math.min(rnd(cmin, cmax), COLORS.length);
+    const pool = shuffle([...COLORS]).slice(0, numChoices);
+    correctIndex = rnd(0, pool.length - 1);
+    options = pool.map(col => ({ shapeId: 'circle', colorHex: col.hex }));
+    promptText = `หาสี${pool[correctIndex].name}`;
+    hint = `ลองดูสีแต่ละวงนะ เรากำลังหาสี${pool[correctIndex].name}จ้ะ`;
+  }
+
+  current = { qType, options, correctIndex, spokenText: promptText, hint };
+
+  questionCard.innerHTML = `
+    <div class="shape-question">${promptText}</div>
+    <div class="choices ${options.length === 4 ? 'grid2' : 'grid3'}" id="choiceRow"></div>
+  `;
+  const row = document.getElementById('choiceRow');
+  options.forEach((opt, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'choice-btn shape-choice-btn';
+    btn.dataset.idx = i;
+    btn.innerHTML = shapeSvg(opt.shapeId, opt.colorHex);
+    btn.onclick = () => answerShape(i, btn);
+    row.appendChild(btn);
+  });
+}
+
+function answerShape(idx, btn){
+  if(locked) return;
+  locked = true;
+  document.querySelectorAll('.choice-btn').forEach(b => b.disabled = true);
+  if(idx === current.correctIndex){
+    btn.classList.add('correct');
+    handleCorrect();
+  } else {
+    btn.classList.add('wrong');
+    const correctBtn = document.querySelector(`.choice-btn[data-idx="${current.correctIndex}"]`);
+    if(correctBtn) correctBtn.classList.add('correct');
     handleWrong();
   }
 }
