@@ -81,6 +81,7 @@
   .mode-compare{ background:linear-gradient(135deg,var(--blue),#3fa9dc); }
   .mode-add{ background:linear-gradient(135deg,var(--green),#3fb87f); }
   .mode-sub{ background:linear-gradient(135deg,var(--orange),#ff7a3d); }
+  .mode-order{ background:linear-gradient(135deg,var(--purple),#9b4fc7); }
 
   /* ---- Game screen ---- */
   #game{ display:none; flex-direction:column; flex:1; }
@@ -222,6 +223,34 @@
     margin-bottom:14px;
   }
 
+  .order-instruction{
+    font-size:1.2rem;
+    font-weight:700;
+    margin-bottom:16px;
+  }
+  .order-chips{
+    display:flex;
+    justify-content:center;
+    flex-wrap:wrap;
+    gap:12px;
+  }
+  .chip-btn{
+    border:none;
+    border-radius:50%;
+    width:64px;
+    height:64px;
+    font-size:1.6rem;
+    font-weight:800;
+    color:#fff;
+    background:linear-gradient(135deg,var(--blue),#3fa9dc);
+    cursor:pointer;
+    box-shadow:0 5px 0 rgba(0,0,0,0.12);
+  }
+  .chip-btn:active{ transform:translateY(3px); box-shadow:0 2px 0 rgba(0,0,0,0.12); }
+  .chip-btn.chip-correct{ background:linear-gradient(135deg,var(--green),#2fae6f); }
+  .chip-btn.chip-wrong{ background:linear-gradient(135deg,#ff5c5c,#d43c3c); }
+  .chip-btn[disabled]{ opacity:.7; }
+
   .feedback{
     min-height:34px;
     font-size:1.2rem;
@@ -298,6 +327,9 @@
     </button>
     <button class="mode-btn mode-sub" onclick="startGame('sub')">
       <span class="emoji">➖</span> การลบเลข
+    </button>
+    <button class="mode-btn mode-order" onclick="startGame('order')">
+      <span class="emoji">🔀</span> เรียงลำดับตัวเลข
     </button>
   </div>
 
@@ -457,6 +489,7 @@ function nextQuestion(){
   else if(mode === 'add') renderArith('add');
   else if(mode === 'sub') renderArith('sub');
   else if(mode === 'count') renderCount();
+  else if(mode === 'order') renderOrder();
 
   if(current && current.spokenText) speak(current.spokenText);
 }
@@ -633,6 +666,60 @@ function answerCount(val, btn){
     btn.classList.add('wrong');
     const correctBtn = document.querySelector(`.choice-btn[data-val="${current.count}"]`);
     if(correctBtn) correctBtn.classList.add('correct');
+    handleWrong();
+  }
+}
+
+/* ---------------- Number ordering mode ---------------- */
+function renderOrder(){
+  const count = rnd(3, 4);
+  const numsSet = new Set();
+  while(numsSet.size < count){
+    numsSet.add(rnd(0, 10));
+  }
+  const numbers = shuffle(Array.from(numsSet));
+  const direction = Math.random() < 0.5 ? 'asc' : 'desc';
+  const target = [...numbers].sort((a, b) => direction === 'asc' ? a - b : b - a);
+
+  current = { numbers, target, direction, nextIndex: 0 };
+  current.spokenText = direction === 'asc'
+    ? 'แตะตัวเลขเรียงจากน้อยไปมาก'
+    : 'แตะตัวเลขเรียงจากมากไปน้อย';
+
+  const dirLabel = direction === 'asc' ? 'น้อยไปมาก ⬆️' : 'มากไปน้อย ⬇️';
+  questionCard.innerHTML = `
+    <div class="order-instruction">แตะเรียงจาก ${dirLabel}</div>
+    <div class="order-chips" id="orderChips"></div>
+  `;
+  const chipRow = document.getElementById('orderChips');
+  numbers.forEach(n => {
+    const chip = document.createElement('button');
+    chip.className = 'chip-btn';
+    chip.textContent = n;
+    chip.dataset.val = n;
+    chip.onclick = () => tapOrderChip(n, chip);
+    chipRow.appendChild(chip);
+  });
+}
+
+function tapOrderChip(val, chip){
+  if(locked) return;
+  if(chip.disabled) return;
+
+  const expected = current.target[current.nextIndex];
+  if(val === expected){
+    chip.disabled = true;
+    chip.classList.add('chip-correct');
+    current.nextIndex++;
+    if(current.nextIndex === current.target.length){
+      locked = true;
+      document.querySelectorAll('.chip-btn').forEach(b => b.disabled = true);
+      handleCorrect();
+    }
+  } else {
+    locked = true;
+    chip.classList.add('chip-wrong');
+    document.querySelectorAll('.chip-btn').forEach(b => b.disabled = true);
     handleWrong();
   }
 }
