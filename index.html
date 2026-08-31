@@ -381,6 +381,30 @@ function toggleSound(){
   if(soundOn) getAudioCtx();
 }
 
+/* ---------------- Read question aloud (Web Speech API) ---------------- */
+let thaiVoice = null;
+
+function pickThaiVoice(){
+  if(!window.speechSynthesis) return null;
+  const voices = window.speechSynthesis.getVoices();
+  return voices.find(v => v.lang && v.lang.toLowerCase().startsWith('th')) || null;
+}
+
+if(window.speechSynthesis){
+  thaiVoice = pickThaiVoice();
+  window.speechSynthesis.onvoiceschanged = () => { thaiVoice = pickThaiVoice(); };
+}
+
+function speak(text){
+  if(!soundOn || !window.speechSynthesis || !thaiVoice) return;
+  window.speechSynthesis.cancel();
+  const utter = new SpeechSynthesisUtterance(text);
+  utter.voice = thaiVoice;
+  utter.lang = 'th-TH';
+  utter.rate = 0.9;
+  window.speechSynthesis.speak(utter);
+}
+
 const questionCard = document.getElementById('questionCard');
 const feedback = document.getElementById('feedback');
 const scoreVal = document.getElementById('scoreVal');
@@ -433,6 +457,8 @@ function nextQuestion(){
   else if(mode === 'add') renderArith('add');
   else if(mode === 'sub') renderArith('sub');
   else if(mode === 'count') renderCount();
+
+  if(current && current.spokenText) speak(current.spokenText);
 }
 
 /* ---------------- Compare mode ---------------- */
@@ -461,6 +487,7 @@ function renderCompare(){
     </div>
   `;
   current.correct = correct;
+  current.spokenText = `${a} มากกว่าหรือน้อยกว่า ${b}`;
 }
 
 function answerCompare(val, btn){
@@ -501,6 +528,9 @@ function renderArith(kind){
     symbol = '−';
   }
   current = { a, b, result, kind };
+  current.spokenText = kind === 'add'
+    ? `${a} บวก ${b} เท่ากับเท่าไร`
+    : `${a} ลบ ${b} เท่ากับเท่าไร`;
 
   // build choices: correct + 2-3 distractors, unique, within reasonable range
   const choicesSet = new Set([result]);
@@ -562,7 +592,7 @@ function answerArith(val, btn){
 function renderCount(){
   const emoji = pickEmoji();
   const count = rnd(1, 10);
-  current = { count, emoji };
+  current = { count, emoji, spokenText: 'มีกี่ตัว' };
 
   const choicesSet = new Set([count]);
   while(choicesSet.size < 4){
