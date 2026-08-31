@@ -272,6 +272,16 @@
   }
   .feedback.ok{ color:#2fae6f; }
   .feedback.no{ color:#d43c3c; }
+  .hint-text{
+    display:inline-block;
+    margin-top:4px;
+    font-size:1rem;
+    font-weight:600;
+    color:#a3701f;
+    background:#fff6df;
+    border-radius:12px;
+    padding:6px 10px;
+  }
 
   .stars-panel{
     text-align:center;
@@ -615,6 +625,9 @@ function renderCompare(){
   `;
   current.correct = correct;
   current.spokenText = `${a} มากกว่าหรือน้อยกว่า ${b}`;
+  current.hint = correct === '='
+    ? `${a} กับ ${b} มีค่าเท่ากันจ้ะ`
+    : `เลข${correct === '>' ? a : b} ตัวใหญ่กว่าเลข${correct === '>' ? b : a} นะจ๊ะ`;
 }
 
 function answerCompare(val, btn){
@@ -660,6 +673,9 @@ function renderArith(kind){
   current.spokenText = kind === 'add'
     ? `${a} บวก ${b} เท่ากับเท่าไร`
     : `${a} ลบ ${b} เท่ากับเท่าไร`;
+  current.hint = kind === 'add'
+    ? `ลองนับนิ้ว ${a} นิ้ว แล้วนับเพิ่มอีก ${b} นิ้วดูนะ`
+    : `มีของ ${a} ชิ้น เอาออกไป ${b} ชิ้น ลองนับของที่เหลือดูนะ`;
 
   // build choices: correct + 2-3 distractors, unique, within reasonable range
   const choicesSet = new Set([result]);
@@ -722,7 +738,7 @@ function renderCount(){
   const emoji = pickEmoji();
   const [lo, hi] = LEVEL_RANGES[level].count;
   const count = rnd(lo, hi);
-  current = { count, emoji, spokenText: 'มีกี่ตัว' };
+  current = { count, emoji, spokenText: 'มีกี่ตัว', hint: 'ลองนับดัง ๆ ทีละตัวนะ 1 2 3...' };
 
   const choicesSet = new Set([count]);
   while(choicesSet.size < 4){
@@ -784,6 +800,9 @@ function renderOrder(){
   current.spokenText = direction === 'asc'
     ? 'แตะตัวเลขเรียงจากน้อยไปมาก'
     : 'แตะตัวเลขเรียงจากมากไปน้อย';
+  current.hint = direction === 'asc'
+    ? 'ลองหาตัวเลขที่น้อยที่สุดก่อน แล้วไล่ไปตัวที่ใหญ่ขึ้นนะ'
+    : 'ลองหาตัวเลขที่มากที่สุดก่อน แล้วไล่ไปตัวที่เล็กลงนะ';
 
   const dirLabel = direction === 'asc' ? 'น้อยไปมาก ⬆️' : 'มากไปน้อย ⬇️';
   questionCard.innerHTML = `
@@ -891,9 +910,13 @@ function handleWrong(){
   updateStreak();
   stars = Math.max(0, stars - 1);
   updateStars();
-  feedback.textContent = tryMsgs[rnd(0, tryMsgs.length - 1)];
+  const base = tryMsgs[rnd(0, tryMsgs.length - 1)];
+  feedback.innerHTML = (current && current.hint)
+    ? `${base}<br><span class="hint-text">💡 ${current.hint}</span>`
+    : base;
   feedback.className = 'feedback no shake';
-  setTimeout(nextQuestion, 1500);
+  if(current && current.hint) speak(current.hint);
+  setTimeout(nextQuestion, current && current.hint ? 2200 : 1500);
 }
 </script>
 </body>
