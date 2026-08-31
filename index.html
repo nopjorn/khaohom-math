@@ -110,7 +110,7 @@
     cursor:pointer;
     color:var(--text);
   }
-  #scoreBox, #wrongBox{
+  #scoreBox, #wrongBox, .streak-box{
     background:var(--card);
     border-radius:14px;
     padding:8px 12px;
@@ -121,6 +121,9 @@
   }
   #scoreBox span{ color:var(--green); }
   #wrongBox span{ color:#d43c3c; }
+  .streak-box span{ color:var(--orange); }
+  .streak-box.hot{ background:linear-gradient(135deg,var(--orange),#ff5a3d); color:#fff; }
+  .streak-box.hot span{ color:#fff; }
   .topbar-right{
     display:flex;
     align-items:center;
@@ -356,6 +359,7 @@
       <button id="backBtn" onclick="goMenu()">⬅ กลับ</button>
       <div class="topbar-right">
         <button id="soundBtn" onclick="toggleSound()" aria-label="เปิด/ปิดเสียง"></button>
+        <div id="streakBox" class="streak-box">🔥 <span id="streakVal">0</span></div>
         <div id="scoreBox">ถูก <span id="scoreVal">0</span> ✅</div>
         <div id="wrongBox">ผิด <span id="wrongVal">0</span> ❌</div>
       </div>
@@ -378,6 +382,7 @@
 let mode = null;
 let score = 0;
 let wrongCount = 0;
+let streak = 0;
 let stars = 0;
 const MAX_STARS = 50;
 let current = null; // holds current question data
@@ -472,6 +477,8 @@ const questionCard = document.getElementById('questionCard');
 const feedback = document.getElementById('feedback');
 const scoreVal = document.getElementById('scoreVal');
 const wrongVal = document.getElementById('wrongVal');
+const streakBox = document.getElementById('streakBox');
+const streakVal = document.getElementById('streakVal');
 const starCountVal = document.getElementById('starCountVal');
 const starsFill = document.getElementById('starsFill');
 document.getElementById('soundBtn').textContent = soundOn ? '🔊' : '🔇';
@@ -493,9 +500,11 @@ function startGame(m){
   mode = m;
   score = 0;
   wrongCount = 0;
+  streak = 0;
   stars = 0;
   scoreVal.textContent = score;
   wrongVal.textContent = wrongCount;
+  updateStreak();
   updateStars();
   document.getElementById('menu').style.display = 'none';
   document.getElementById('game').style.display = 'flex';
@@ -510,6 +519,14 @@ function goMenu(){
 function updateStars(){
   starCountVal.textContent = stars;
   starsFill.style.width = (stars / MAX_STARS * 100) + '%';
+}
+
+function updateStreak(){
+  streakVal.textContent = streak;
+  streakBox.classList.toggle('hot', streak >= 5);
+  streakBox.classList.remove('pop');
+  void streakBox.offsetWidth;
+  streakBox.classList.add('pop');
 }
 
 function nextQuestion(){
@@ -770,9 +787,12 @@ function handleCorrect(){
   playCorrectSound();
   score++;
   scoreVal.textContent = score;
+  streak++;
+  updateStreak();
   stars = Math.min(MAX_STARS, stars + 1);
   updateStars();
-  feedback.textContent = goodMsgs[rnd(0, goodMsgs.length - 1)];
+  feedback.textContent = goodMsgs[rnd(0, goodMsgs.length - 1)]
+    + (streak >= 3 ? ` ตอบถูกติดกัน ${streak} ข้อ 🔥` : '');
   feedback.className = 'feedback ok pop';
   setTimeout(nextQuestion, 1100);
 }
@@ -781,6 +801,8 @@ function handleWrong(){
   playWrongSound();
   wrongCount++;
   wrongVal.textContent = wrongCount;
+  streak = 0;
+  updateStreak();
   stars = Math.max(0, stars - 1);
   updateStars();
   feedback.textContent = tryMsgs[rnd(0, tryMsgs.length - 1)];
