@@ -179,6 +179,9 @@
     box-shadow:0 5px 0 rgba(0,0,0,0.12);
   }
   .choice-btn:active{ transform:translateY(3px); box-shadow:0 2px 0 rgba(0,0,0,0.12); }
+  .choices.grid3 .choice-btn{ font-size:1.05rem; }
+  .cmp-text{ display:block; }
+  .cmp-symbol{ display:block; font-size:1.8rem; margin-top:4px; }
   .choice-btn.correct{ background:linear-gradient(135deg,var(--green),#2fae6f); }
   .choice-btn.wrong{ background:linear-gradient(135deg,#ff5c5c,#d43c3c); }
   .choice-btn[disabled]{ opacity:.55; }
@@ -432,9 +435,9 @@ function renderCompare(){
       <div class="num-box pop">${b}</div>
     </div>
     <div class="choices grid3">
-      <button class="choice-btn" data-val=">" onclick="answerCompare('>', this)">มากกว่า &gt;</button>
-      <button class="choice-btn" data-val="<" onclick="answerCompare('<', this)">น้อยกว่า &lt;</button>
-      <button class="choice-btn" data-val="=" onclick="answerCompare('=', this)">เท่ากับ =</button>
+      <button class="choice-btn" data-val=">" onclick="answerCompare('>', this)"><span class="cmp-text">มากกว่า</span><span class="cmp-symbol">&gt;</span></button>
+      <button class="choice-btn" data-val="<" onclick="answerCompare('<', this)"><span class="cmp-text">น้อยกว่า</span><span class="cmp-symbol">&lt;</span></button>
+      <button class="choice-btn" data-val="=" onclick="answerCompare('=', this)"><span class="cmp-text">เท่ากับ</span><span class="cmp-symbol">=</span></button>
     </div>
   `;
   current.correct = correct;
