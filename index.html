@@ -98,19 +98,21 @@
     cursor:pointer;
     color:var(--text);
   }
-  #scoreBox{
+  #scoreBox, #wrongBox{
     background:var(--card);
     border-radius:14px;
-    padding:8px 14px;
+    padding:8px 12px;
     font-weight:700;
-    font-size:1rem;
+    font-size:0.95rem;
     box-shadow:0 2px 6px rgba(0,0,0,0.06);
+    white-space:nowrap;
   }
-  #scoreBox span{ color:var(--pink); }
+  #scoreBox span{ color:var(--green); }
+  #wrongBox span{ color:#d43c3c; }
   .topbar-right{
     display:flex;
     align-items:center;
-    gap:10px;
+    gap:8px;
   }
   #soundBtn{
     background:#fff;
@@ -210,12 +212,30 @@
   .feedback.ok{ color:#2fae6f; }
   .feedback.no{ color:#d43c3c; }
 
-  .stars{
+  .stars-panel{
     text-align:center;
-    font-size:1.4rem;
     margin-top:auto;
     padding-top:10px;
-    letter-spacing:4px;
+  }
+  .stars-label{
+    font-size:1.1rem;
+    font-weight:700;
+    margin-bottom:6px;
+  }
+  .stars-label #starCountVal{ color:var(--pink); }
+  .stars-bar{
+    background:#eee;
+    border-radius:20px;
+    height:22px;
+    overflow:hidden;
+    box-shadow:inset 0 2px 4px rgba(0,0,0,0.08);
+  }
+  .stars-fill{
+    height:100%;
+    width:0%;
+    background:linear-gradient(90deg,var(--yellow),var(--pink));
+    border-radius:20px;
+    transition:width .4s ease;
   }
 
   footer{
@@ -264,7 +284,8 @@
       <button id="backBtn" onclick="goMenu()">⬅ กลับ</button>
       <div class="topbar-right">
         <button id="soundBtn" onclick="toggleSound()" aria-label="เปิด/ปิดเสียง"></button>
-        <div id="scoreBox">ถูก <span id="scoreVal">0</span> ⭐</div>
+        <div id="scoreBox">ถูก <span id="scoreVal">0</span> ✅</div>
+        <div id="wrongBox">ผิด <span id="wrongVal">0</span> ❌</div>
       </div>
     </div>
 
@@ -272,15 +293,21 @@
 
     <div id="feedback" class="feedback"></div>
 
-    <div class="stars" id="starsRow"></div>
+    <div class="stars-panel">
+      <div class="stars-label">⭐ ดาวสะสม <span id="starCountVal">0</span> / 50</div>
+      <div class="stars-bar"><div class="stars-fill" id="starsFill"></div></div>
+    </div>
   </div>
 
-  <footer>ทำถูกเรื่อย ๆ เพื่อสะสมดาว ⭐ ให้ครบ 10 ดวงนะ</footer>
+  <footer>ทำถูกเรื่อย ๆ เพื่อสะสมดาว ⭐ ให้ครบ 50 ดวงนะ</footer>
 </div>
 
 <script>
 let mode = null;
 let score = 0;
+let wrongCount = 0;
+let stars = 0;
+const MAX_STARS = 50;
 let current = null; // holds current question data
 let locked = false;
 let soundOn = localStorage.getItem('khaohom-sound') !== 'off';
@@ -335,7 +362,9 @@ function toggleSound(){
 const questionCard = document.getElementById('questionCard');
 const feedback = document.getElementById('feedback');
 const scoreVal = document.getElementById('scoreVal');
-const starsRow = document.getElementById('starsRow');
+const wrongVal = document.getElementById('wrongVal');
+const starCountVal = document.getElementById('starCountVal');
+const starsFill = document.getElementById('starsFill');
 document.getElementById('soundBtn').textContent = soundOn ? '🔊' : '🔇';
 
 function rnd(min, max){
@@ -353,8 +382,11 @@ function shuffle(arr){
 function startGame(m){
   mode = m;
   score = 0;
+  wrongCount = 0;
+  stars = 0;
   scoreVal.textContent = score;
-  starsRow.textContent = '';
+  wrongVal.textContent = wrongCount;
+  updateStars();
   document.getElementById('menu').style.display = 'none';
   document.getElementById('game').style.display = 'flex';
   nextQuestion();
@@ -366,8 +398,8 @@ function goMenu(){
 }
 
 function updateStars(){
-  const stars = Math.min(score, 10);
-  starsRow.textContent = '⭐'.repeat(stars) + '☆'.repeat(10 - stars);
+  starCountVal.textContent = stars;
+  starsFill.style.width = (stars / MAX_STARS * 100) + '%';
 }
 
 function nextQuestion(){
@@ -511,6 +543,7 @@ function handleCorrect(){
   playCorrectSound();
   score++;
   scoreVal.textContent = score;
+  stars = Math.min(MAX_STARS, stars + 1);
   updateStars();
   feedback.textContent = goodMsgs[rnd(0, goodMsgs.length - 1)];
   feedback.className = 'feedback ok pop';
@@ -519,6 +552,10 @@ function handleCorrect(){
 
 function handleWrong(){
   playWrongSound();
+  wrongCount++;
+  wrongVal.textContent = wrongCount;
+  stars = Math.max(0, stars - 1);
+  updateStars();
   feedback.textContent = tryMsgs[rnd(0, tryMsgs.length - 1)];
   feedback.className = 'feedback no shake';
   setTimeout(nextQuestion, 1500);
