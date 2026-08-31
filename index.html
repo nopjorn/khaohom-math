@@ -319,6 +319,40 @@
     75%{ transform:translateX(8px); }
   }
   .shake{ animation:shake .3s ease; }
+
+  .celebration-overlay{
+    position:fixed; inset:0;
+    background:rgba(0,0,0,.45);
+    display:flex; align-items:center; justify-content:center;
+    z-index:50; padding:16px;
+  }
+  .celebration-card{
+    background:#fff;
+    border-radius:28px;
+    padding:32px 24px;
+    text-align:center;
+    position:relative;
+    overflow:hidden;
+    max-width:340px;
+    box-shadow:0 20px 40px rgba(0,0,0,.25);
+  }
+  .celebration-emoji{ font-size:3rem; }
+  .celebration-title{ font-size:1.4rem; font-weight:800; color:var(--pink); margin:6px 0 4px; }
+  .celebration-sub{ font-size:1.1rem; font-weight:700; margin-bottom:18px; }
+  .celebration-btn{
+    border:none; border-radius:18px;
+    padding:14px 22px;
+    font-size:1.15rem; font-weight:800; color:#fff;
+    background:linear-gradient(135deg,var(--green),#2fae6f);
+    box-shadow:0 5px 0 rgba(0,0,0,.12);
+    cursor:pointer;
+  }
+  .confetti-layer{ position:absolute; inset:0; pointer-events:none; overflow:hidden; }
+  .confetti-bit{ position:absolute; top:-10%; font-size:1.4rem; animation:confetti-fall linear forwards; }
+  @keyframes confetti-fall{
+    0%{ transform:translateY(-10%) rotate(0deg); opacity:1; }
+    100%{ transform:translateY(320px) rotate(360deg); opacity:0; }
+  }
 </style>
 </head>
 <body>
@@ -376,6 +410,16 @@
   </div>
 
   <footer>ทำถูกเรื่อย ๆ เพื่อสะสมดาว ⭐ ให้ครบ 50 ดวงนะ</footer>
+
+  <div id="celebrationOverlay" class="celebration-overlay" style="display:none;">
+    <div class="celebration-card">
+      <div class="confetti-layer" id="confettiLayer"></div>
+      <div class="celebration-emoji">🏆</div>
+      <div class="celebration-title">ดาวครบ 50 ดวงแล้ว!</div>
+      <div class="celebration-sub">เก่งมากๆ เลยจ้ะ! 🎉🌟</div>
+      <button class="celebration-btn" onclick="closeCelebration()">เล่นต่อ ➡️</button>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -789,12 +833,54 @@ function handleCorrect(){
   scoreVal.textContent = score;
   streak++;
   updateStreak();
+  const prevStars = stars;
   stars = Math.min(MAX_STARS, stars + 1);
   updateStars();
   feedback.textContent = goodMsgs[rnd(0, goodMsgs.length - 1)]
     + (streak >= 3 ? ` ตอบถูกติดกัน ${streak} ข้อ 🔥` : '');
   feedback.className = 'feedback ok pop';
+
+  if(prevStars < MAX_STARS && stars === MAX_STARS){
+    celebrate();
+    return;
+  }
   setTimeout(nextQuestion, 1100);
+}
+
+function celebrate(){
+  locked = true;
+  spawnConfetti();
+  playFanfare();
+  speak('เก่งมากๆ เลย ดาวครบ 50 ดวงแล้ว');
+  document.getElementById('celebrationOverlay').style.display = 'flex';
+}
+
+function closeCelebration(){
+  document.getElementById('celebrationOverlay').style.display = 'none';
+  document.getElementById('confettiLayer').innerHTML = '';
+  nextQuestion();
+}
+
+function spawnConfetti(){
+  const layer = document.getElementById('confettiLayer');
+  layer.innerHTML = '';
+  const bits = ['🎉', '⭐', '🌟', '✨', '🎊'];
+  for(let i = 0; i < 24; i++){
+    const s = document.createElement('span');
+    s.className = 'confetti-bit';
+    s.textContent = bits[rnd(0, bits.length - 1)];
+    s.style.left = rnd(0, 100) + '%';
+    s.style.animationDelay = (Math.random() * 0.6) + 's';
+    s.style.animationDuration = (1.2 + Math.random() * 0.8) + 's';
+    layer.appendChild(s);
+  }
+}
+
+function playFanfare(){
+  if(!soundOn) return;
+  const ctx = getAudioCtx();
+  const now = ctx.currentTime;
+  [523.25, 659.25, 783.99, 1046.50].forEach((f, i) => playTone(f, now + i * 0.15, 0.3, 'triangle', 0.28));
 }
 
 function handleWrong(){
