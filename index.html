@@ -61,6 +61,16 @@
     gap:14px;
     margin-top:20px;
   }
+  .level-panel{ margin-bottom:6px; text-align:center; }
+  .level-label{ font-weight:700; margin-bottom:8px; color:#888; }
+  .level-row{ display:flex; gap:8px; justify-content:center; }
+  .level-btn{
+    flex:1; max-width:120px;
+    border:2px solid #eee; background:#fff; border-radius:14px;
+    padding:10px 6px; font-size:1rem; font-weight:700; color:var(--text);
+    cursor:pointer;
+  }
+  .level-btn.selected{ border-color:var(--pink); background:#ffe9f0; color:var(--pink); }
   .mode-btn{
     border:none;
     border-radius:22px;
@@ -316,6 +326,14 @@
   </header>
 
   <div id="menu">
+    <div class="level-panel">
+      <div class="level-label">ระดับความยาก</div>
+      <div class="level-row">
+        <button class="level-btn" data-level="easy" onclick="setLevel('easy')">ง่าย</button>
+        <button class="level-btn" data-level="medium" onclick="setLevel('medium')">ปานกลาง</button>
+        <button class="level-btn" data-level="hard" onclick="setLevel('hard')">ยาก</button>
+      </div>
+    </div>
     <button class="mode-btn mode-count" onclick="startGame('count')">
       <span class="emoji">🔢</span> นับเลข
     </button>
@@ -365,6 +383,19 @@ const MAX_STARS = 50;
 let current = null; // holds current question data
 let locked = false;
 let soundOn = localStorage.getItem('khaohom-sound') !== 'off';
+let level = localStorage.getItem('khaohom-level') || 'easy'; // 'easy' | 'medium' | 'hard'
+
+const LEVEL_RANGES = {
+  easy:   { cmp: [0, 5],  add: [0, 5],  sub: [0, 5],  count: [1, 5],  order: [0, 5],  orderCount: [3, 3] },
+  medium: { cmp: [0, 10], add: [0, 10], sub: [0, 10], count: [1, 10], order: [0, 10], orderCount: [3, 4] },
+  hard:   { cmp: [0, 20], add: [0, 20], sub: [0, 20], count: [1, 20], order: [0, 20], orderCount: [4, 4] },
+};
+
+function setLevel(l){
+  level = l;
+  localStorage.setItem('khaohom-level', l);
+  document.querySelectorAll('.level-btn').forEach(b => b.classList.toggle('selected', b.dataset.level === l));
+}
 
 /* ---------------- Sound effects (Web Audio API, no files needed) ---------------- */
 let audioCtx = null;
@@ -444,6 +475,7 @@ const wrongVal = document.getElementById('wrongVal');
 const starCountVal = document.getElementById('starCountVal');
 const starsFill = document.getElementById('starsFill');
 document.getElementById('soundBtn').textContent = soundOn ? '🔊' : '🔇';
+document.querySelector(`.level-btn[data-level="${level}"]`).classList.add('selected');
 
 function rnd(min, max){
   return Math.floor(Math.random() * (max - min + 1)) + min;
@@ -496,8 +528,9 @@ function nextQuestion(){
 
 /* ---------------- Compare mode ---------------- */
 function renderCompare(){
-  let a = rnd(0, 10);
-  let b = rnd(0, 10);
+  const [lo, hi] = LEVEL_RANGES[level].cmp;
+  let a = rnd(lo, hi);
+  let b = rnd(lo, hi);
   // avoid too many equal cases dominating - bias toward variety but allow equals sometimes
   if(Math.random() < 0.15) b = a; // ~15% chance of equal
   current = { a, b };
@@ -550,12 +583,14 @@ function renderArith(kind){
   emoji = pickEmoji();
 
   if(kind === 'add'){
-    a = rnd(0, 8);
-    b = rnd(0, 10 - a);
+    const [lo, hi] = LEVEL_RANGES[level].add;
+    a = rnd(lo, hi);
+    b = rnd(0, hi - a);
     result = a + b;
     symbol = '+';
   } else {
-    a = rnd(1, 10);
+    const [lo, hi] = LEVEL_RANGES[level].sub;
+    a = rnd(Math.max(1, lo), hi);
     b = rnd(0, a);
     result = a - b;
     symbol = '−';
@@ -570,7 +605,7 @@ function renderArith(kind){
   while(choicesSet.size < 4){
     let delta = rnd(-3, 3);
     let candidate = result + delta;
-    if(candidate < 0 || candidate > 18) continue;
+    if(candidate < 0 || candidate > Math.max(20, result + 5)) continue;
     choicesSet.add(candidate);
   }
   const choices = shuffle(Array.from(choicesSet));
@@ -624,14 +659,15 @@ function answerArith(val, btn){
 /* ---------------- Counting mode ---------------- */
 function renderCount(){
   const emoji = pickEmoji();
-  const count = rnd(1, 10);
+  const [lo, hi] = LEVEL_RANGES[level].count;
+  const count = rnd(lo, hi);
   current = { count, emoji, spokenText: 'มีกี่ตัว' };
 
   const choicesSet = new Set([count]);
   while(choicesSet.size < 4){
     let delta = rnd(-3, 3);
     let candidate = count + delta;
-    if(candidate < 1 || candidate > 20) continue;
+    if(candidate < 1 || candidate > Math.max(20, count + 5)) continue;
     choicesSet.add(candidate);
   }
   const choices = shuffle(Array.from(choicesSet));
@@ -672,10 +708,12 @@ function answerCount(val, btn){
 
 /* ---------------- Number ordering mode ---------------- */
 function renderOrder(){
-  const count = rnd(3, 4);
+  const [lo, hi] = LEVEL_RANGES[level].order;
+  const [cmin, cmax] = LEVEL_RANGES[level].orderCount;
+  const count = rnd(cmin, cmax);
   const numsSet = new Set();
   while(numsSet.size < count){
-    numsSet.add(rnd(0, 10));
+    numsSet.add(rnd(lo, hi));
   }
   const numbers = shuffle(Array.from(numsSet));
   const direction = Math.random() < 0.5 ? 'asc' : 'desc';
