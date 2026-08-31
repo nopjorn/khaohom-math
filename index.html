@@ -77,6 +77,7 @@
   }
   .mode-btn:active{ transform:translateY(4px); box-shadow:0 2px 0 rgba(0,0,0,0.12); }
   .mode-btn .emoji{ font-size:2.1rem; }
+  .mode-count{ background:linear-gradient(135deg,var(--pink),#e8447a); }
   .mode-compare{ background:linear-gradient(135deg,var(--blue),#3fa9dc); }
   .mode-add{ background:linear-gradient(135deg,var(--green),#3fb87f); }
   .mode-sub{ background:linear-gradient(135deg,var(--orange),#ff7a3d); }
@@ -206,6 +207,21 @@
   }
   .visual-row .fade{ opacity:.25; }
 
+  .visual-grid{
+    display:flex;
+    justify-content:center;
+    flex-wrap:wrap;
+    gap:8px;
+    font-size:2.1rem;
+    max-width:340px;
+    margin:4px auto 14px;
+  }
+  .count-question{
+    font-size:1.3rem;
+    font-weight:700;
+    margin-bottom:14px;
+  }
+
   .feedback{
     min-height:34px;
     font-size:1.2rem;
@@ -271,6 +287,9 @@
   </header>
 
   <div id="menu">
+    <button class="mode-btn mode-count" onclick="startGame('count')">
+      <span class="emoji">🔢</span> นับเลข
+    </button>
     <button class="mode-btn mode-compare" onclick="startGame('compare')">
       <span class="emoji">⚖️</span> เปรียบเทียบตัวเลข
     </button>
@@ -413,6 +432,7 @@ function nextQuestion(){
   if(mode === 'compare') renderCompare();
   else if(mode === 'add') renderArith('add');
   else if(mode === 'sub') renderArith('sub');
+  else if(mode === 'count') renderCount();
 }
 
 /* ---------------- Compare mode ---------------- */
@@ -533,6 +553,55 @@ function answerArith(val, btn){
   } else {
     btn.classList.add('wrong');
     const correctBtn = document.querySelector(`.choice-btn[data-val="${current.result}"]`);
+    if(correctBtn) correctBtn.classList.add('correct');
+    handleWrong();
+  }
+}
+
+/* ---------------- Counting mode ---------------- */
+function renderCount(){
+  const emoji = pickEmoji();
+  const count = rnd(1, 10);
+  current = { count, emoji };
+
+  const choicesSet = new Set([count]);
+  while(choicesSet.size < 4){
+    let delta = rnd(-3, 3);
+    let candidate = count + delta;
+    if(candidate < 1 || candidate > 20) continue;
+    choicesSet.add(candidate);
+  }
+  const choices = shuffle(Array.from(choicesSet));
+
+  questionCard.innerHTML = `
+    <div class="visual-grid">${emoji.repeat(count)}</div>
+    <div class="count-question">มีกี่ตัว?</div>
+    <div class="choices grid2" id="choiceRow"></div>
+  `;
+
+  const row = document.getElementById('choiceRow');
+  choices.forEach(c => {
+    const btn = document.createElement('button');
+    btn.className = 'choice-btn';
+    btn.textContent = c;
+    btn.dataset.val = c;
+    btn.onclick = () => answerCount(c, btn);
+    row.appendChild(btn);
+  });
+}
+
+function answerCount(val, btn){
+  if(locked) return;
+  locked = true;
+  const buttons = document.querySelectorAll('.choice-btn');
+  buttons.forEach(b => b.disabled = true);
+
+  if(val === current.count){
+    btn.classList.add('correct');
+    handleCorrect();
+  } else {
+    btn.classList.add('wrong');
+    const correctBtn = document.querySelector(`.choice-btn[data-val="${current.count}"]`);
     if(correctBtn) correctBtn.classList.add('correct');
     handleWrong();
   }
